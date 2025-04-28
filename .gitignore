@@ -1,0 +1,5 @@
+﻿.vscode/
+__pycache__/
+
+.env
+src/envv.py
