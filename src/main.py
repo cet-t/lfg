@@ -33,9 +33,6 @@ class Bot(commands.Bot):
             return envv.environ[name]
 
     async def setup_hook(self) -> None:
-        guilds = [732942987331633202]
-        for guild in guilds:
-            await self.tree.sync(guild=discord.Object(guild))
         await self.tree.sync()
 
 
