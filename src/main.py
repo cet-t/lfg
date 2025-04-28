@@ -16,7 +16,7 @@ class Bot(commands.Bot):
         cogs = [
             f"{os.path.dirname(cog_dir)}.{file.split(".")[0]}".split("/")[-1]
             for file in os.listdir(cog_dir)
-            if not (file.startswith("__") and file.endswith("__"))
+            if not file.startswith("__")
         ]
         for cog in cogs:
             asyncio.run(self.load_extension(cog))

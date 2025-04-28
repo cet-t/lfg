@@ -33,7 +33,7 @@ class LFGCog(commands.Cog):
         await self.bot.tree.sync()
         print(__name__)
 
-    @app_commands.command()
+    @app_commands.command(name="lfg")
     @app_commands.describe(
         playing="遊び方",
         vc="使用vc",
@@ -71,7 +71,7 @@ class LFGCog(commands.Cog):
             note=note,
         )
         nodes.value["lfgs"].append(node)
-        embed = LFGCog.create_embed(node)
+        embed = await LFGCog.create_embed(node, interaction.guild)
         await dpy_util.set_info(
             embed, interaction.guild, interaction.user, self.bot.user
         )
@@ -87,9 +87,7 @@ class LFGCog(commands.Cog):
                 )
             )
         )
-        thread.add_user(interaction.user)
-        if thread.starter_message is not None:
-            await thread.starter_message.delete()
+        await thread.add_user(interaction.user)
         with open(
             PATH,
             loading_mode.write_override,
@@ -98,8 +96,13 @@ class LFGCog(commands.Cog):
             yaml.dump(nodes.value, f, indent=2, sort_keys=False)
 
     @staticmethod
-    def create_embed(data: LFGDict) -> discord.Embed:
-        embed = LFGEmbed()
+    async def create_embed(data: LFGDict, guild: discord.Guild | None) -> discord.Embed:
+        everyone = ""
+        if guild is not None:
+            roles = await guild.fetch_roles()
+            ev_role_f = list(filter(lambda role: role.name == "everyone", roles))[0]
+            everyone = ev_role_f.mention
+        embed = LFGEmbed(description=everyone)
         embed.add_field(
             name="遊び方",
             value=data["playing"],
