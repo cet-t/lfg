@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from nullable import nullable
+from utils.nullable import nullable
 from utils.util import datetime_format, dpy_util, mention_type
 
 

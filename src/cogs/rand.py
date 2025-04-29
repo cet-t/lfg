@@ -5,12 +5,9 @@ from discord.ext import commands
 from discord import app_commands
 import requests
 
-from data import WeaponsDict
-from nullable import nullable
-from utils.util import dpy_util, encoding_type, loading_mode, mention_type
+from utils.nullable import nullable
+from utils.util import dpy_util, mention_type
 from utils.values import api_url
-
-WEAPONS_PATH = "./data/weapons.json"
 
 
 class RandCog(commands.Cog):

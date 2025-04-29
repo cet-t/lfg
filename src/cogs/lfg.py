@@ -6,7 +6,7 @@ from discord.ext import commands
 import yaml
 
 from data import LFGDict, LFGListDict
-from nullable import nullable
+from utils.nullable import nullable
 from utils.values import params
 from utils.util import (
     datetime_format,
@@ -54,12 +54,12 @@ class LFGCog(commands.Cog):
         note: Optional[str] = None,
         thread_name: Optional[str] = None,
     ) -> None:
-        nodes = nullable[LFGListDict](None)
-        with open(PATH, loading_mode.read, encoding=encoding_type.utf8) as f:
-            if (read := yaml.load(f, Loader=yaml.FullLoader)) is not None:
-                nodes.value = LFGListDict(read)
-        if not nodes.has_value:
-            nodes.value = LFGListDict(lfgs=list[LFGDict]())
+        # nodes = nullable[LFGListDict](None)
+        # with open(PATH, loading_mode.read, encoding=encoding_type.utf8) as f:
+        #     if (read := yaml.load(f, Loader=yaml.FullLoader)) is not None:
+        #         nodes.value = LFGListDict(read)
+        # if not nodes.has_value:
+        #     nodes.value = LFGListDict(lfgs=list[LFGDict]())
 
         node = LFGDict(
             recruiter_id=interaction.user.id,
@@ -70,13 +70,32 @@ class LFGCog(commands.Cog):
             players=players,
             note=note,
         )
-        nodes.value["lfgs"].append(node)
+        # nodes.value["lfgs"].append(node)
         embed = await LFGCog.create_embed(node, interaction.guild)
         await dpy_util.set_info(
             embed, interaction.guild, interaction.user, self.bot.user
         )
-        response = await interaction.response.send_message(embed=embed)
+        notify_lines = [
+            "@everyone",
+            f"【遊び方】{node.get(params.lfg_dict_keys.playing)}",
+            f"【使用VC】{vc.name}",
+            f"【名目】{node.get(params.lfg_dict_keys.purpose)}",
+            f"【時間】{node.get(params.lfg_dict_keys.time)}",
+            f"【人数】{node.get(params.lfg_dict_keys.players)}",
+        ]
+        if (note := node.get(params.lfg_dict_keys.note)) is not None:
+            notify_lines.append(f"【備考】{note}")
+        notify_content = str.join("\n", notify_lines)
+        response = await interaction.response.send_message(
+            allowed_mentions=discord.AllowedMentions.all(),
+            content=notify_content,
+        )
         message = await interaction.channel.fetch_message(response.message_id)  # type: ignore
+        await message.edit(
+            content="@everyone",
+            embed=embed,
+            allowed_mentions=discord.AllowedMentions.all(),
+        )
         thread = await message.create_thread(
             name=(
                 thread_name
@@ -88,21 +107,16 @@ class LFGCog(commands.Cog):
             )
         )
         await thread.add_user(interaction.user)
-        with open(
-            PATH,
-            loading_mode.write_override,
-            encoding=encoding_type.utf8,
-        ) as f:
-            yaml.dump(nodes.value, f, indent=2, sort_keys=False)
+        # with open(
+        #     PATH,
+        #     loading_mode.write_override,
+        #     encoding=encoding_type.utf8,
+        # ) as f:
+        #     yaml.dump(nodes.value, f, indent=2, sort_keys=False)
 
     @staticmethod
     async def create_embed(data: LFGDict, guild: discord.Guild | None) -> discord.Embed:
-        everyone = ""
-        if guild is not None:
-            roles = await guild.fetch_roles()
-            ev_role_f = list(filter(lambda role: role.name == "everyone", roles))[0]
-            everyone = ev_role_f.mention
-        embed = LFGEmbed(description=everyone)
+        embed = LFGEmbed()
         embed.add_field(
             name="遊び方",
             value=data["playing"],

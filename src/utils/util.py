@@ -3,7 +3,7 @@ from enum import Enum, StrEnum
 
 import discord
 
-from nullable import nullable
+from utils.nullable import nullable
 
 
 class mention_type(Enum):
