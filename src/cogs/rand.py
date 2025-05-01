@@ -6,7 +6,8 @@ from discord import app_commands
 import requests
 
 from utils.nullable import nullable
-from utils.util import dpy_util, mention_type
+
+import utils.dpy_utils
 from utils.values import api_url
 
 
@@ -43,11 +44,11 @@ class RandCog(commands.Cog):
                     embed = discord.Embed(title="武器ルーレット")
                     for member, weapon in members_weapon.items():
                         embed.add_field(
-                            name=dpy_util.mention(
-                                mention_type.user,
+                            name=utils.dpy_utils.mention(
+                                utils.dpy_utils.mention_type.user,
                                 nullable(member.id),
                             ),
-                            value=dpy_util.code_block(weapon),
+                            value=utils.dpy_utils.code_block(weapon),
                         )
                     await interaction.response.send_message(embed=embed)
                 else:
@@ -73,7 +74,7 @@ class RandCog(commands.Cog):
             title="武器ルーレット",
             description=weapon_node["name"]["ja_JP"],
         )
-        dpy_util.set_footer(embed, guild)
+        utils.dpy_utils.set_footer(embed, guild)
         return embed
 
 

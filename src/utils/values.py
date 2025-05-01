@@ -1,6 +1,10 @@
 ﻿from typing import Final
 
 
+class file_path:
+    roles_yml: Final = "./data/roles.yml"
+
+
 class api_url:
     stat_ink_weapon: Final = "https://stat.ink/api/v3/weapon"
     stat_ink_stage: Final = "https://stat.ink/api/v3/stage"

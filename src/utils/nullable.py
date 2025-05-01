@@ -4,13 +4,13 @@ T = TypeVar("T")
 
 
 class nullable(Generic[T]):
-    def __init__(self, value: T | None):
+    def __init__(self, value: T | None) -> None:
         self.__has_value = value is not None
         if value is not None:
             self.__value = value
 
     @staticmethod
-    def null():
+    def null() -> "nullable[T]":
         return nullable[T](None)
 
     @property

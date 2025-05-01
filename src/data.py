@@ -1,4 +1,4 @@
-﻿from typing import Optional, TypedDict
+﻿from typing import NotRequired, Optional, TypedDict
 
 
 class LFGDict(TypedDict):
@@ -13,3 +13,16 @@ class LFGDict(TypedDict):
 
 class LFGListDict(TypedDict):
     lfgs: list[LFGDict]
+
+
+# class RoleIDDict(TypedDict):
+#     midnight: NotRequired[int]
+
+
+# class RoleIDsDict(TypedDict):
+#     roles: dict[int, RoleIDDict]
+
+
+class MidnightTimeDict(TypedDict):
+    start: str
+    end: str

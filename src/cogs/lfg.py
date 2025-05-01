@@ -3,16 +3,14 @@ from typing import Any, Optional
 import discord
 from discord import app_commands
 from discord.ext import commands
-import yaml
 
-from data import LFGDict, LFGListDict
+from data import LFGDict
+from envv import roles
+import utils.dpy_utils
 from utils.nullable import nullable
 from utils.values import params
-from utils.util import (
+from utils.dpy_utils import (
     datetime_format,
-    dpy_util,
-    encoding_type,
-    loading_mode,
     mention_type,
 )
 
@@ -30,10 +28,9 @@ class LFGCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        await self.bot.tree.sync()
         print(__name__)
 
-    @app_commands.command(name="lfg")
+    @app_commands.command(name="募集")
     @app_commands.describe(
         playing="遊び方",
         vc="使用vc",
@@ -54,13 +51,6 @@ class LFGCog(commands.Cog):
         note: Optional[str] = None,
         thread_name: Optional[str] = None,
     ) -> None:
-        # nodes = nullable[LFGListDict](None)
-        # with open(PATH, loading_mode.read, encoding=encoding_type.utf8) as f:
-        #     if (read := yaml.load(f, Loader=yaml.FullLoader)) is not None:
-        #         nodes.value = LFGListDict(read)
-        # if not nodes.has_value:
-        #     nodes.value = LFGListDict(lfgs=list[LFGDict]())
-
         node = LFGDict(
             recruiter_id=interaction.user.id,
             playing=playing,
@@ -70,13 +60,21 @@ class LFGCog(commands.Cog):
             players=players,
             note=note,
         )
-        # nodes.value["lfgs"].append(node)
-        embed = await LFGCog.create_embed(node, interaction.guild)
-        await dpy_util.set_info(
+        embed = await LFGCog.create_embed(node)
+        await utils.dpy_utils.set_info(
             embed, interaction.guild, interaction.user, self.bot.user
         )
+        is_midnight = 1 <= datetime.now().hour < 7  # 1:00~6:59
+        role_mention: str = (
+            utils.dpy_utils.mention(
+                mention_type.role,
+                nullable(roles.get(interaction.guild.id)),  # type: ignore
+            )
+            if is_midnight
+            else "@everyone"
+        )
         notify_lines = [
-            "@everyone",
+            role_mention,
             f"【遊び方】{node.get(params.lfg_dict_keys.playing)}",
             f"【使用VC】{vc.name}",
             f"【名目】{node.get(params.lfg_dict_keys.purpose)}",
@@ -92,7 +90,7 @@ class LFGCog(commands.Cog):
         )
         message = await interaction.channel.fetch_message(response.message_id)  # type: ignore
         await message.edit(
-            content="@everyone",
+            content=role_mention,
             embed=embed,
             allowed_mentions=discord.AllowedMentions.all(),
         )
@@ -107,15 +105,9 @@ class LFGCog(commands.Cog):
             )
         )
         await thread.add_user(interaction.user)
-        # with open(
-        #     PATH,
-        #     loading_mode.write_override,
-        #     encoding=encoding_type.utf8,
-        # ) as f:
-        #     yaml.dump(nodes.value, f, indent=2, sort_keys=False)
 
     @staticmethod
-    async def create_embed(data: LFGDict, guild: discord.Guild | None) -> discord.Embed:
+    async def create_embed(data: LFGDict) -> discord.Embed:
         embed = LFGEmbed()
         embed.add_field(
             name="遊び方",
@@ -123,7 +115,7 @@ class LFGCog(commands.Cog):
         )
         embed.add_field(
             name="使用VC",
-            value=dpy_util.mention(
+            value=utils.dpy_utils.mention(
                 mention_type.channel,
                 nullable(data.get(params.lfg_dict_keys.vc_id)),
             ),
@@ -142,7 +134,7 @@ class LFGCog(commands.Cog):
         )
         if (note := data.get(params.lfg_dict_keys.note)) is not None:
             embed.add_field(
-                name="● 備考",
+                name="備考",
                 value=note,
             )
         return embed

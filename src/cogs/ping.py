@@ -6,7 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from utils.nullable import nullable
-from utils.util import datetime_format, dpy_util, mention_type
+import utils.dpy_utils
 
 
 class PingCog(commands.Cog):
@@ -15,7 +15,6 @@ class PingCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        await self.bot.tree.sync()
         print(__name__)
 
     @commands.hybrid_command()
@@ -33,19 +32,23 @@ class PingCog(commands.Cog):
         if ctx.guild is not None:
             member = await ctx.guild.fetch_member(author.id)
 
-            dpy_util.add_code_field(
+            utils.dpy_utils.add_code_field(
                 embed,
                 "アカウント作成日時",
-                author.created_at.__format__(datetime_format.yyyymmddhhmmss),
+                author.created_at.__format__(
+                    utils.dpy_utils.datetime_format.yyyymmddhhmmss
+                ),
                 False,
             )
-            dpy_util.add_code_field(
+            utils.dpy_utils.add_code_field(
                 embed,
                 "サーバー参加日時",
-                member.joined_at.__format__(datetime_format.yyyymmddhhmmss),
+                member.joined_at.__format__(
+                    utils.dpy_utils.datetime_format.yyyymmddhhmmss
+                ),
                 False,
             )
-            dpy_util.add_code_field(
+            utils.dpy_utils.add_code_field(
                 embed,
                 "ロール",
                 str.join("\n", [f"- {role.name}" for role in member.roles]),
