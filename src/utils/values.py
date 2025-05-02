@@ -1,4 +1,4 @@
-﻿from typing import Final
+﻿from typing import Final, overload
 
 
 class file_path:
@@ -9,9 +9,11 @@ class api_url:
     stat_ink_weapon: Final = "https://stat.ink/api/v3/weapon"
     stat_ink_stage: Final = "https://stat.ink/api/v3/stage"
 
-    # yuu26_schedule: Final = "https://spla3.yuu26.com/api/schedule"
-    # yuu26_schedule_open_now: Final = "https://spla3.yuu26.com/api/bankara-open/now"
-    # yuu26_schedule_open_next: Final = "https://spla3.yuu26.com/api/bankara-open/next"
+    yuu26_schedule: Final = "https://spla3.yuu26.com/api/schedule"
+    yuu26_schedule_open_now: Final = "https://spla3.yuu26.com/api/bankara-open/now"
+    yuu26_schedule_open_next: Final = "https://spla3.yuu26.com/api/bankara-open/next"
+    yuu26_schedule_fest_open_now: Final = "https://spla3.yuu26.com/api/fest/schedule"
+    yuu26_schedule_fest_tri_now: Final = "https://spla3.yuu26.com/api/fest/tri/now"
 
 
 class params:

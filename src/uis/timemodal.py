@@ -60,5 +60,6 @@ class TimeModal(discord.ui.Modal):
                 embed=create_error_embed(
                     interaction.guild,  # type: ignore
                     f"error.",
-                )
+                ),
+                ephemeral=True,
             )

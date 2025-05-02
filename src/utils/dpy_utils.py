@@ -30,8 +30,8 @@ def heading(lv: int, text) -> str:
     return f"{str.join("", ["#" for _ in range(lv)])} {text}"  # type: ignore
 
 
-def mention(type: mention_type, id: nullable[int]) -> str:
-    if not id.has_value:
+def mention(type: mention_type, id: Optional[int]) -> str:
+    if id is None:
         return id.__str__()
     match type:
         case mention_type.none:
@@ -54,7 +54,7 @@ def add_code_field(embed: discord.Embed, name, value, inline: bool = False) -> N
 
 def set_author(
     embed: discord.Embed,
-    member: discord.Member | None,
+    member: Optional[discord.Member],
 ) -> discord.Embed:
     if member is not None:
         embed.set_author(
@@ -64,7 +64,7 @@ def set_author(
     return embed
 
 
-def set_footer(embed: discord.Embed, guild: discord.Guild | None) -> discord.Embed:
+def set_footer(embed: discord.Embed, guild: Optional[discord.Guild]) -> discord.Embed:
     if guild is not None:
         embed.set_footer(
             text=datetime.now().__format__(datetime_format.yyyymmddhhmmss),
@@ -75,11 +75,10 @@ def set_footer(embed: discord.Embed, guild: discord.Guild | None) -> discord.Emb
 
 async def set_info(
     embed: discord.Embed,
-    guild: discord.Guild | None,
-    user: discord.User | discord.Member | None,
-    bot: discord.ClientUser | None,
-) -> discord.Embed:
-    if guild is not None and user is not None and bot is not None:
+    guild: Optional[discord.Guild],
+    user: Optional[discord.User | discord.Member],
+) -> None:
+    if guild is not None and user is not None:
         member = await guild.fetch_member(user.id)
         embed.set_author(
             name=member.display_name,
@@ -89,7 +88,6 @@ async def set_info(
             text=f"{guild.name} - {datetime.now().__format__(datetime_format.yyyymmddhhmmss)}",
             icon_url=guild.icon,
         )
-    return embed
 
 
 async def check_admin(

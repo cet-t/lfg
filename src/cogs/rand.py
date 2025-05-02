@@ -46,7 +46,7 @@ class RandCog(commands.Cog):
                         embed.add_field(
                             name=utils.dpy_utils.mention(
                                 utils.dpy_utils.mention_type.user,
-                                nullable(member.id),
+                                member.id,
                             ),
                             value=utils.dpy_utils.code_block(weapon),
                         )

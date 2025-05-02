@@ -8,7 +8,10 @@ class Bot(commands.Bot):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         await self.change_presence(
-            activity=discord.Game("準備中..."),
+            activity=discord.Activity(
+                name="準備",
+                type=discord.ActivityType.competing,
+            ),
             status=discord.Status.idle,
         )
         await self.tree.sync()
@@ -16,7 +19,7 @@ class Bot(commands.Bot):
         await self.change_presence(
             activity=discord.Streaming(
                 name="Splatoon 3",
-                url="https://twitch.tv/example",
+                url="https://www.twitch.tv/hikakin",
             ),
         )
 
