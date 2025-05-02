@@ -5,8 +5,6 @@ from typing import Any, Optional
 import discord
 
 from utils.common_utils import datetime_format, is_empty
-import utils.dpy_utils
-from utils.nullable import nullable
 
 
 class mention_type(Enum):

@@ -1,11 +1,7 @@
-﻿import asyncio
-from dis import disco
-import math
+﻿import math
 import discord
-from discord import app_commands
 from discord.ext import commands
 
-from utils.nullable import nullable
 import utils.dpy_utils
 
 
@@ -17,7 +13,7 @@ class PingCog(commands.Cog):
     async def on_ready(self) -> None:
         print(__name__)
 
-    @commands.hybrid_command()
+    @commands.hybrid_command(description="botの応答速度を計測")
     async def ping(self, ctx: commands.Context) -> None:
         pong = f"Pong! {math.floor(self.bot.latency * 1000)} ms"
         if ctx.interaction is None:

@@ -1,4 +1,4 @@
-﻿from typing import Final, overload
+﻿from typing import Final
 
 
 class file_path:
@@ -20,6 +20,7 @@ class params:
     class lfg_dict_keys:
         recruiter_id: Final[str] = "recruiter_id"
         playing: Final[str] = "playing"
+        camp: Final[str] = "camp"
         vc_id: Final[str] = "vc_id"
         purpose: Final[str] = "purpose"
         time: Final[str] = "time"
