@@ -54,6 +54,6 @@ class Bot(commands.Bot):
 
 
 if __name__ == "__main__":
-    bot = Bot(command_prefix=["!", "?"], intents=discord.Intents.all())
+    bot = Bot(command_prefix=[], intents=discord.Intents.all())
     bot.setup_cog("./src/cogs/")
     bot.run()

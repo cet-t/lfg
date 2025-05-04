@@ -5,7 +5,19 @@ from discord import app_commands
 from discord.ext import commands
 
 from data import Camp, LFGDict, Playing, get_players_choices
-from envv import any_ids, fest_ids, arbeit_ids, lobby_ids, roles
+from envv import (
+    any_ids,
+    any_vc_ids,
+    arbeit_vc_ids,
+    fest_ids,
+    arbeit_ids,
+    fuka_vc_ids,
+    lobby_ids,
+    lobby_vc_ids,
+    manta_vc_ids,
+    roles,
+    utuho_vc_ids,
+)
 import utils.dpy_utils
 from utils.values import params
 from utils.dpy_utils import (
@@ -90,10 +102,26 @@ class LFGCog(commands.Cog):
             )
         )
 
+    async def autocomplete_lobby(
+        self,
+        interaction: discord.Interaction,
+        value: str,
+    ) -> list[app_commands.Choice[str]]:
+        voice_channels = (
+            interaction.guild.voice_channels if interaction.guild is not None else []
+        )
+        if len(voice_channels) < 1:
+            return []
+        return [
+            app_commands.Choice(name=vc.name, value=vc.id.__str__())
+            for vc in voice_channels
+            if vc.id in lobby_vc_ids
+        ]
+
     @app_commands.command(name="ロビー募集")
     @app_commands.describe(
         playing="遊び方",
-        vc="使用VC",
+        vc_id="使用VC",
         purpose="名目",
         time="時間",
         players="人数",
@@ -108,11 +136,12 @@ class LFGCog(commands.Cog):
         ],
         players=get_players_choices(1, 10),
     )
+    @app_commands.autocomplete(vc_id=autocomplete_lobby)
     async def lfg_lobby(
         self,
         interaction: discord.Interaction,
         playing: app_commands.Choice[str],
-        vc: discord.VoiceChannel,
+        vc_id: str,
         purpose: str,
         time: str,
         players: app_commands.Choice[str],
@@ -127,38 +156,68 @@ class LFGCog(commands.Cog):
                 ),
                 ephemeral=True,
             )
-        node = LFGDict(
-            recruiter_id=interaction.user.id,
-            playing=Playing(playing.value),
-            camp=None,
-            vc_id=vc.id,
-            purpose=purpose,
-            time=time,
-            players=players.value,
-            note=note,
+        vc: discord.VoiceChannel
+        if interaction.guild is not None:
+            for voice_channel in interaction.guild.voice_channels:
+                if int(vc_id) == voice_channel.id:
+                    vc = voice_channel
+                    break
+        try:
+            node = LFGDict(
+                recruiter_id=interaction.user.id,
+                playing=Playing(playing.value),
+                camp=None,
+                vc_id=vc.id,
+                purpose=purpose,
+                time=time,
+                players=players.value,
+                note=note,
+            )
+            embed = await LFGCog.create_embed(node)
+            await utils.dpy_utils.set_info(
+                embed,
+                interaction.guild,
+                interaction.user,
+            )
+            response = await interaction.response.send_message(
+                allowed_mentions=discord.AllowedMentions.all(),
+                content=self.__create_notify_content(interaction.guild, node, vc),
+            )
+            message = await interaction.channel.fetch_message(response.message_id)  # type: ignore
+            await message.edit(
+                content=self.__get_mention(interaction.guild),
+                embed=embed,
+                allowed_mentions=discord.AllowedMentions.all(),
+            )
+            thread = await self.__create_thread(node, message, thread_name)
+            await thread.add_user(interaction.user)
+        except TypeError:
+            return await interaction.response.send_message(
+                embed=create_error_embed(
+                    interaction.guild,  # type: ignore
+                    "あれれ～？",
+                )
+            )
+
+    async def autocomplete_arbeit(
+        self,
+        interaction: discord.Interaction,
+        value: str,
+    ) -> list[app_commands.Choice[str]]:
+        voice_channels = (
+            interaction.guild.voice_channels if interaction.guild is not None else []
         )
-        embed = await LFGCog.create_embed(node)
-        await utils.dpy_utils.set_info(
-            embed,
-            interaction.guild,
-            interaction.user,
-        )
-        response = await interaction.response.send_message(
-            allowed_mentions=discord.AllowedMentions.all(),
-            content=self.__create_notify_content(interaction.guild, node, vc),
-        )
-        message = await interaction.channel.fetch_message(response.message_id)  # type: ignore
-        await message.edit(
-            content=self.__get_mention(interaction.guild),
-            embed=embed,
-            allowed_mentions=discord.AllowedMentions.all(),
-        )
-        thread = await self.__create_thread(node, message, thread_name)
-        await thread.add_user(interaction.user)
+        if len(voice_channels) < 1:
+            return []
+        return [
+            app_commands.Choice(name=vc.name, value=vc.id.__str__())
+            for vc in voice_channels
+            if vc.id in arbeit_vc_ids
+        ]
 
     @app_commands.command(name="サモラン募集")
     @app_commands.describe(
-        vc="使用VC",
+        vc_id="使用VC",
         purpose="名目",
         time="時間",
         players="人数",
@@ -166,10 +225,11 @@ class LFGCog(commands.Cog):
         thread_name="スレッド名",
     )
     @app_commands.choices(players=get_players_choices(1, 3))
+    @app_commands.autocomplete(vc_id=autocomplete_arbeit)
     async def lfg_arbeit(
         self,
         interaction: discord.Interaction,
-        vc: discord.VoiceChannel,
+        vc_id: str,
         purpose: str,
         time: str,
         players: app_commands.Choice[str],
@@ -184,6 +244,12 @@ class LFGCog(commands.Cog):
                 ),
                 ephemeral=True,
             )
+        vc: discord.VoiceChannel
+        if interaction.guild is not None:
+            for voice_channel in interaction.guild.voice_channels:
+                if int(vc_id) == voice_channel.id:
+                    vc = voice_channel
+                    break
         node = LFGDict(
             recruiter_id=interaction.user.id,
             playing=Playing.バイト,
@@ -213,21 +279,38 @@ class LFGCog(commands.Cog):
         thread = await self.__create_thread(node, message, thread_name)
         await thread.add_user(interaction.user)
 
+    async def autocomplete_any(
+        self,
+        interaction: discord.Interaction,
+        value: str,
+    ) -> list[app_commands.Choice[str]]:
+        voice_channels = (
+            interaction.guild.voice_channels if interaction.guild is not None else []
+        )
+        if len(voice_channels) < 1:
+            return []
+        return [
+            app_commands.Choice(name=vc.name, value=vc.id.__str__())
+            for vc in voice_channels
+            if vc.id in any_vc_ids
+        ]
+
     @app_commands.command(name="その他募集")
     @app_commands.describe(
         playing="遊び方",
-        vc="使用VC",
+        vc_id="使用VC",
         purpose="名目",
         time="時間",
         players="人数",
         note="備考",
         thread_name="スレッド名",
     )
+    @app_commands.autocomplete(vc_id=autocomplete_any)
     async def lfg_any(
         self,
         interaction: discord.Interaction,
         playing: str,
-        vc: discord.VoiceChannel,
+        vc_id: str,
         purpose: str,
         time: str,
         players: int,
@@ -242,6 +325,12 @@ class LFGCog(commands.Cog):
                 ),
                 ephemeral=True,
             )
+        vc: discord.VoiceChannel
+        if interaction.guild is not None:
+            for voice_channel in interaction.guild.voice_channels:
+                if int(vc_id) == voice_channel.id:
+                    vc = voice_channel
+                    break
         node = LFGDict(
             recruiter_id=interaction.user.id,
             playing=playing,
@@ -271,11 +360,35 @@ class LFGCog(commands.Cog):
         thread = await self.__create_thread(node, message, thread_name)
         await thread.add_user(interaction.user)
 
+    async def autocomplete_fest(self, interaction: discord.Interaction, value: str):
+        if (guild := interaction.guild) is None or interaction.data is None:
+            return list[app_commands.Choice]()
+        try:
+            camp_str = interaction.data.get("options", [{}])[1].get("value")
+            if camp_str is None:
+                return list[app_commands.Choice]()
+
+            vc_ids = []
+            match Camp(camp_str):
+                case Camp.マンタロー:
+                    vc_ids = manta_vc_ids
+                case Camp.フウカ:
+                    vc_ids = fuka_vc_ids
+                case Camp.ウツホ:
+                    vc_ids = utuho_vc_ids
+            return [
+                app_commands.Choice(name=vc.name, value=vc.id.__str__())
+                for vc in guild.voice_channels
+                if vc.id in vc_ids
+            ]
+        except IndexError:
+            return list[app_commands.Choice]()
+
     @app_commands.command(name="フェス募集")
     @app_commands.describe(
         playing="遊び方",
         camp="陣営",
-        vc="使用VC",
+        vc_id="使用VC",
         purpose="名目",
         time="時間",
         players="人数",
@@ -294,12 +407,13 @@ class LFGCog(commands.Cog):
         ],
         players=get_players_choices(1, 3),
     )
+    @app_commands.autocomplete(vc_id=autocomplete_fest)
     async def lfg_fest(
         self,
         interaction: discord.Interaction,
         playing: app_commands.Choice[str],
         camp: app_commands.Choice[str],
-        vc: discord.VoiceChannel,
+        vc_id: str,
         purpose: str,
         time: str,
         players: app_commands.Choice[str],
@@ -314,6 +428,13 @@ class LFGCog(commands.Cog):
                 ),
                 ephemeral=True,
             )
+        vc: discord.VoiceChannel
+        if interaction.guild is not None:
+            for voice_channel in interaction.guild.voice_channels:
+                if int(vc_id) == voice_channel.id:
+                    vc = voice_channel
+                    break
+
         node = LFGDict(
             recruiter_id=interaction.user.id,
             playing=Playing(playing.value),
