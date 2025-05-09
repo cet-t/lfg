@@ -1,5 +1,5 @@
-﻿from datetime import datetime
-from genericpath import exists
+﻿import asyncio
+from datetime import datetime
 import json
 import os
 from typing import Any, Optional
@@ -130,6 +130,7 @@ class LFGCog(commands.Cog):
                 else:
                     new_message = await message.channel.send(command_link)
                     data["pinned_messages"][i]["message_id"] = new_message.id
+                    await asyncio.sleep(1)
                     break
             with open(pinned_message_path, "w") as f:
                 json.dump(data, f, indent=2)
@@ -320,25 +321,6 @@ class LFGCog(commands.Cog):
                 )
             )
 
-        # if exists_pinned_message_path():
-        #     with open(pinned_message_path) as f:
-        #         data = PinnedMessagesDict(json.load(f))
-        #         for i in range(len(data["pinned_messages"])):
-        #             channel_id = data["pinned_messages"][i]["channel_id"]
-        #             message_id = data["pinned_messages"][i]["message_id"]
-        #             if interaction.channel_id == channel_id:
-        #                 if message_id is not None:
-        #                     del_message = await interaction.channel.fetch_message(  # type: ignore
-        #                         message_id
-        #                     )
-        #                     await del_message.delete()
-        #                 message = await interaction.channel.send(  # type: ignore
-        #                     pinned_cmd_links[PlayingType.lobby]
-        #                 )
-        #                 data["pinned_messages"][i]["message_id"] = message.id
-        #     with open(pinned_message_path, "w") as f:
-        #         json.dump(data, f, indent=2)
-
     async def autocomplete_arbeit(
         self,
         interaction: discord.Interaction,
@@ -431,25 +413,6 @@ class LFGCog(commands.Cog):
         thread = await self.__create_thread(node, message, thread_name)
         await thread.add_user(interaction.user)
 
-        # if exists_pinned_message_path():
-        #     with open(pinned_message_path) as f:
-        #         data = PinnedMessagesDict(json.load(f))
-        #         for i in range(len(data["pinned_messages"])):
-        #             channel_id = data["pinned_messages"][i]["channel_id"]
-        #             message_id = data["pinned_messages"][i]["message_id"]
-        #             if interaction.channel_id == channel_id:
-        #                 if message_id is not None:
-        #                     del_message = await interaction.channel.fetch_message(  # type: ignore
-        #                         message_id
-        #                     )
-        #                     await del_message.delete()
-        #                 message = await interaction.channel.send(  # type: ignore
-        #                     pinned_cmd_links[PlayingType.arbeit]
-        #                 )
-        #                 data["pinned_messages"][i]["message_id"] = message.id
-        #     with open(pinned_message_path, "w") as f:
-        #         json.dump(data, f, indent=2)
-
     async def autocomplete_any(
         self,
         interaction: discord.Interaction,
@@ -530,25 +493,6 @@ class LFGCog(commands.Cog):
         )
         thread = await self.__create_thread(node, message, thread_name)
         await thread.add_user(interaction.user)
-
-        # if exists_pinned_message_path():
-        #     with open(pinned_message_path) as f:
-        #         data = PinnedMessagesDict(json.load(f))
-        #         for i in range(len(data["pinned_messages"])):
-        #             channel_id = data["pinned_messages"][i]["channel_id"]
-        #             message_id = data["pinned_messages"][i]["message_id"]
-        #             if interaction.channel_id == channel_id:
-        #                 if message_id is not None:
-        #                     del_message = await interaction.channel.fetch_message(  # type: ignore
-        #                         message_id
-        #                     )
-        #                     await del_message.delete()
-        #                 message = await interaction.channel.send(  # type: ignore
-        #                     pinned_cmd_links[PlayingType.other]
-        #                 )
-        #                 data["pinned_messages"][i]["message_id"] = message.id
-        #     with open(pinned_message_path, "w") as f:
-        #         json.dump(data, f, indent=2)
 
     async def autocomplete_fest(self, interaction: discord.Interaction, value: str):
         if (guild := interaction.guild) is None or interaction.data is None:
@@ -681,25 +625,6 @@ class LFGCog(commands.Cog):
         )
         thread = await self.__create_thread(node, message, thread_name)
         await thread.add_user(interaction.user)
-
-        # if exists_pinned_message_path():
-        #     with open(pinned_message_path) as f:
-        #         data = PinnedMessagesDict(json.load(f))
-        #         for i in range(len(data["pinned_messages"])):
-        #             channel_id = data["pinned_messages"][i]["channel_id"]
-        #             message_id = data["pinned_messages"][i]["message_id"]
-        #             if interaction.channel_id == channel_id:
-        #                 if message_id is not None:
-        #                     del_message = await interaction.channel.fetch_message(  # type: ignore
-        #                         message_id
-        #                     )
-        #                     await del_message.delete()
-        #                 message = await interaction.channel.send(  # type: ignore
-        #                     pinned_cmd_links[PlayingType.fest]
-        #                 )
-        #                 data["pinned_messages"][i]["message_id"] = message.id
-        #     with open(pinned_message_path, "w") as f:
-        #         json.dump(data, f, indent=2)
 
     @staticmethod
     async def create_embed(data: LFGDict) -> discord.Embed:

@@ -3,8 +3,6 @@ import json
 from typing import Optional, TypedDict
 from discord import app_commands
 
-from envv import exists_pinned_message_path, pinned_message_path
-
 
 class PlayingType(Enum):
     lobby = 0
@@ -70,16 +68,16 @@ class PinnedMessagesDict(TypedDict):
     pinned_messages: list[PinnedMessageDict]
 
 
-def try_write_pinned_messages(data: PinnedMessagesDict) -> bool:
-    """
-    ファイルに書き込み
-    """
-    try:
-        if not exists_pinned_message_path():
-            return False
+# def try_write_pinned_messages(data: PinnedMessagesDict) -> bool:
+#     """
+#     ファイルに書き込み
+#     """
+#     try:
+#         if not exists_pinned_message_path():
+#             return False
 
-        with open(pinned_message_path, "w") as f:
-            json.dump(data, f, indent=2)
-    except:
-        return False
-    return True
+#         with open(pinned_message_path, "w") as f:
+#             json.dump(data, f, indent=2)
+#     except:
+#         return False
+#     return True
