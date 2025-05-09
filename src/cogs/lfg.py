@@ -1,4 +1,5 @@
 ﻿from datetime import datetime
+from genericpath import exists
 import json
 import os
 from typing import Any, Optional
@@ -12,14 +13,17 @@ from data import (
     PinnedMessageDict,
     PinnedMessagesDict,
     Playing,
+    PlayingType,
     get_players_choices,
 )
 from envv import (
     any_ch_ids,
     any_vc_ids,
     arbeit_vc_ids,
+    cat_ids_types,
+    exists_pinned_message_path,
     pinned_ch_ids,
-    fest_vc_ids,
+    fest_ch_ids,
     arbeit_ch_ids,
     fuka_vc_ids,
     guild_ids,
@@ -28,6 +32,7 @@ from envv import (
     manta_vc_ids,
     pinned_message_path,
     midnight_role_ids,
+    pinned_cmd_links,
     utuho_vc_ids,
 )
 import utils.dpy_utils
@@ -47,45 +52,87 @@ class LFGEmbed(discord.Embed):
 
 
 class LFGCog(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        # data: Optional[PinnedMessagesDict] = None
-        # exists = os.path.exists(pinned_message_path)
-        # if not exists:
-        #     data = PinnedMessagesDict(pinned_messages=[])
-        #     for _, ids in pinned_ch_ids.items():
-        #         for id in ids:
-        #             data["pinned_messages"].append(
-        #                 PinnedMessageDict(channel_id=id, message_id=None)
-        #             )
-        #     with open(pinned_message_path, "x") as f:
-        #         json.dump(data, f, indent=2)
-        # else:
-        #     with open(pinned_message_path, "r") as f:
-        #         data = PinnedMessagesDict(json.load(f))
-        # if data is not None:
-        #     guild = await self.bot.fetch_guild(guild_ids["release"])
-        #     for i in range(len(data["pinned_messages"])):
-        #         channel = await guild.fetch_channel(
-        #             data["pinned_messages"][i]["channel_id"]
-        #         )
-        #         message_id: int | None = None
-        #         if data["pinned_messages"][i]["message_id"] is None:
-        #             # 送信
-        #             message = await channel.send("募集はこちらをタップ☞/rsth")  # type: ignore
-        #             message_id = message.id
-        #         # else:
-        #         #     message = await channel.fetch_message(data["pinned_messages"][i]["message_id"])  # type: ignore
-        #         #     new_message = await message.edit(content="test2")
-        #         #     message_id = new_message.id
-        #         data["pinned_messages"][i]["message_id"] = message_id
-        # with open(pinned_message_path, "w") as f:
-        #     json.dump(data, f, indent=2)
+        data = PinnedMessagesDict(pinned_messages=[])
+        if exists := exists_pinned_message_path():
+            with open(pinned_message_path, "r") as f:
+                data = PinnedMessagesDict(json.load(f))
+
+        guild = await self.bot.fetch_guild(guild_ids["release"])
+
+        # 新規作成
+        if len(data["pinned_messages"]) <= 0:
+            for playing_type, channel_ids in pinned_ch_ids.items():
+                command_link = pinned_cmd_links[playing_type]
+                for channel_id in channel_ids:
+                    ch = await guild.fetch_channel(channel_id)
+                    message = await ch.send(command_link)  # type: ignore
+                    data["pinned_messages"].append(
+                        PinnedMessageDict(channel_id=channel_id, message_id=message.id)
+                    )
+        with open(pinned_message_path, "w" if exists else "x") as f:
+            json.dump(data, f, indent=2)
 
         print(__name__)
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message) -> None:
+        await self.__update_pinned_message(message)
+
+    def __try_save_data(self, data: PinnedMessagesDict) -> bool:
+        try:
+            if exists_pinned_message_path():
+                with open(pinned_message_path, "w") as f:
+                    json.dump(data, f, indent=2)
+        except:
+            return False
+        return True
+
+    async def __update_pinned_message(self, message: discord.Message) -> None:
+        """
+        固定メッセージの更新
+        """
+        # メッセージが一時的 or ファイルが存在しない
+        if message.flags.ephemeral or not exists_pinned_message_path():
+            return
+
+        with open(pinned_message_path) as f:
+            data = PinnedMessagesDict(json.load(f))
+
+        # 対象チャンネル内か確認
+        channel_ids = [item["channel_id"] for item in data["pinned_messages"]]
+        if message.channel.id not in channel_ids:  # 対象チャンネル外
+            return
+
+        message_ids = [item["message_id"] for item in data["pinned_messages"]]
+        # 自分自身が送信した固定メッセージではない(ファイルにチャンネルIDが存在しない)
+        if message.id not in message_ids:
+            for i in range(len(data["pinned_messages"])):
+                pinned_message = data["pinned_messages"][i]
+                category_id = int(message.channel.category_id)  # type: ignore
+                command_link = pinned_cmd_links[cat_ids_types[category_id]]
+                if pinned_message["message_id"] is not None:
+                    if message.channel.id == pinned_message["channel_id"]:
+                        old_message_id = pinned_message["message_id"]
+                        try:
+                            # 通知用に一度メッセージを削除しているので一回目は例外
+                            old_message = await message.channel.fetch_message(old_message_id)  # type: ignore
+                            await old_message.delete()
+                        except discord.NotFound:
+                            return
+                        new_message = await message.channel.send(command_link)
+                        data["pinned_messages"][i]["message_id"] = new_message.id
+                        break
+                else:
+                    new_message = await message.channel.send(command_link)
+                    data["pinned_messages"][i]["message_id"] = new_message.id
+                    break
+            with open(pinned_message_path, "w") as f:
+                json.dump(data, f, indent=2)
 
     @property
     def __is_midnight(self) -> bool:
@@ -152,6 +199,7 @@ class LFGCog(commands.Cog):
     @app_commands.command(
         name="delete", description="メッセージを削除(他人のメッセージは削除不可)"
     )
+    @app_commands.describe(message_id="メッセージID")
     async def delete(self, interaction: discord.Interaction, message_id: int) -> None:
         delete_user_id = interaction.user.id
         try:
@@ -173,74 +221,6 @@ class LFGCog(commands.Cog):
             ),
             ephemeral=True,
         )
-
-    @app_commands.command(name="set_pinned_message")
-    @app_commands.describe(category="カテゴリ")
-    @app_commands.choices(
-        category=[
-            app_commands.Choice(name="ロビー", value="lobby"),
-            app_commands.Choice(name="バイト", value="beit"),
-            app_commands.Choice(name="その他", value="any"),
-            app_commands.Choice(name="フェス", value="fest"),
-        ]
-    )
-    async def set_pinned_message(
-        self,
-        interaction: discord.Interaction,
-        category: app_commands.Choice[str],
-    ):
-        content = "募集はこちらをタップ☞"
-        match category.value:
-            case "lobby":
-                content = "</ロビー募集:1367780421248749701>"
-            case "beit":
-                content = "</バイト募集:1369647448779128863>"
-            case "any":
-                content = "</その他募集:1367879652365963405>"
-            case "fest":
-                content = "</フェス募集:1367766800024080434>"
-        if not content.endswith(">"):
-            await interaction.response.send_message(
-                embed=create_error_embed(interaction.guild, "あれー？"),  # type: ignore
-                ephemeral=True,
-            )
-        else:
-            data: Optional[PinnedMessagesDict] = None
-            setupable = False
-            if not os.path.exists(pinned_message_path):
-                data = PinnedMessagesDict(pinned_messages=[])
-                with open(pinned_message_path, "x") as f:
-                    json.dump(data, f, indent=2)
-                setupable = True
-            else:
-                with open(pinned_message_path, "r") as f:
-                    data = PinnedMessagesDict(json.load(f))
-                for item in data["pinned_messages"]:
-                    if item["channel_id"] == interaction.channel.id:  # type: ignore
-                        if item["message_id"] is not None:
-                            setupable = False
-            if setupable:
-                pass
-            message = await interaction.channel.send(content)  # type: ignore
-            if data is not None and interaction.channel is not None:
-                item = PinnedMessageDict(
-                    channel_id=interaction.channel.id,
-                    message_id=message.id,
-                )
-                for i in range(len(data["pinned_messages"])):
-                    if data["pinned_messages"][i]["channel_id"] == item["channel_id"]:
-                        data["pinned_messages"][i]["message_id"] = item["message_id"]
-                        break
-            with open(pinned_message_path, "w") as f:
-                json.dump(data, f, indent=2)
-            # with open(pinned_message_path, "r") as f:
-            #     data = PinnedMessagesDict(json.load(f))
-            # for i in range(len(data["pinned_messages"])):
-            #     if data["pinned_messages"][i]["channel_id"] == interaction.channel_id:
-            #         data["pinned_messages"][i]["message_id"] = message.id
-            #         break
-            # with open(pinned_message_path, "w") as f:
-            #     json.dump(data, f, indent=2)
 
     async def autocomplete_lobby(
         self,
@@ -289,7 +269,7 @@ class LFGCog(commands.Cog):
         note: Optional[str] = None,
         thread_name: Optional[str] = None,
     ) -> None:
-        if interaction.channel.id not in lobby_ch_ids:  # type: ignore
+        if interaction.channel.id not in pinned_ch_ids[PlayingType.lobby]:  # type: ignore
             return await interaction.response.send_message(
                 embed=create_error_embed(
                     interaction.guild,  # type: ignore
@@ -340,24 +320,24 @@ class LFGCog(commands.Cog):
                 )
             )
 
-        if interaction.guild is not None and os.path.exists(pinned_message_path):
-            with open(pinned_message_path, "r") as f:
-                data = PinnedMessagesDict(json.load(f))
-            if data is None:
-                return
-            for i in range(len(data["pinned_messages"])):
-                if interaction.channel_id == data["pinned_messages"][i]["channel_id"]:
-                    try:
-                        old_message = await interaction.channel.fetch_message(data["pinned_messages"][i]["message_id"])  # type: ignore
-                        content = old_message.content
-                        await old_message.delete()
-                    except:
-                        pass
-                    new_message = await interaction.channel.send(content)  # type: ignore
-                    data["pinned_messages"][i]["message_id"] = new_message.id
-                    with open(pinned_message_path, "w") as f:
-                        json.dump(data, f, indent=2)
-                    break
+        # if exists_pinned_message_path():
+        #     with open(pinned_message_path) as f:
+        #         data = PinnedMessagesDict(json.load(f))
+        #         for i in range(len(data["pinned_messages"])):
+        #             channel_id = data["pinned_messages"][i]["channel_id"]
+        #             message_id = data["pinned_messages"][i]["message_id"]
+        #             if interaction.channel_id == channel_id:
+        #                 if message_id is not None:
+        #                     del_message = await interaction.channel.fetch_message(  # type: ignore
+        #                         message_id
+        #                     )
+        #                     await del_message.delete()
+        #                 message = await interaction.channel.send(  # type: ignore
+        #                     pinned_cmd_links[PlayingType.lobby]
+        #                 )
+        #                 data["pinned_messages"][i]["message_id"] = message.id
+        #     with open(pinned_message_path, "w") as f:
+        #         json.dump(data, f, indent=2)
 
     async def autocomplete_arbeit(
         self,
@@ -408,7 +388,7 @@ class LFGCog(commands.Cog):
         note: Optional[str] = None,
         thread_name: Optional[str] = None,
     ) -> None:
-        if interaction.channel.id not in arbeit_ch_ids:  # type: ignore
+        if interaction.channel.id not in pinned_ch_ids[PlayingType.arbeit]:  # type: ignore
             return await interaction.response.send_message(
                 embed=create_error_embed(
                     interaction.guild,  # type: ignore
@@ -450,6 +430,25 @@ class LFGCog(commands.Cog):
         )
         thread = await self.__create_thread(node, message, thread_name)
         await thread.add_user(interaction.user)
+
+        # if exists_pinned_message_path():
+        #     with open(pinned_message_path) as f:
+        #         data = PinnedMessagesDict(json.load(f))
+        #         for i in range(len(data["pinned_messages"])):
+        #             channel_id = data["pinned_messages"][i]["channel_id"]
+        #             message_id = data["pinned_messages"][i]["message_id"]
+        #             if interaction.channel_id == channel_id:
+        #                 if message_id is not None:
+        #                     del_message = await interaction.channel.fetch_message(  # type: ignore
+        #                         message_id
+        #                     )
+        #                     await del_message.delete()
+        #                 message = await interaction.channel.send(  # type: ignore
+        #                     pinned_cmd_links[PlayingType.arbeit]
+        #                 )
+        #                 data["pinned_messages"][i]["message_id"] = message.id
+        #     with open(pinned_message_path, "w") as f:
+        #         json.dump(data, f, indent=2)
 
     async def autocomplete_any(
         self,
@@ -532,6 +531,25 @@ class LFGCog(commands.Cog):
         thread = await self.__create_thread(node, message, thread_name)
         await thread.add_user(interaction.user)
 
+        # if exists_pinned_message_path():
+        #     with open(pinned_message_path) as f:
+        #         data = PinnedMessagesDict(json.load(f))
+        #         for i in range(len(data["pinned_messages"])):
+        #             channel_id = data["pinned_messages"][i]["channel_id"]
+        #             message_id = data["pinned_messages"][i]["message_id"]
+        #             if interaction.channel_id == channel_id:
+        #                 if message_id is not None:
+        #                     del_message = await interaction.channel.fetch_message(  # type: ignore
+        #                         message_id
+        #                     )
+        #                     await del_message.delete()
+        #                 message = await interaction.channel.send(  # type: ignore
+        #                     pinned_cmd_links[PlayingType.other]
+        #                 )
+        #                 data["pinned_messages"][i]["message_id"] = message.id
+        #     with open(pinned_message_path, "w") as f:
+        #         json.dump(data, f, indent=2)
+
     async def autocomplete_fest(self, interaction: discord.Interaction, value: str):
         if (guild := interaction.guild) is None or interaction.data is None:
             return list[app_commands.Choice]()
@@ -592,7 +610,7 @@ class LFGCog(commands.Cog):
         note: Optional[str] = None,
         thread_name: Optional[str] = None,
     ) -> None:
-        if interaction.channel.id not in fest_vc_ids:  # type: ignore
+        if interaction.channel.id not in pinned_ch_ids[PlayingType.fest]:  # type: ignore
             return await interaction.response.send_message(
                 embed=create_error_embed(
                     interaction.guild,  # type: ignore
@@ -663,6 +681,25 @@ class LFGCog(commands.Cog):
         )
         thread = await self.__create_thread(node, message, thread_name)
         await thread.add_user(interaction.user)
+
+        # if exists_pinned_message_path():
+        #     with open(pinned_message_path) as f:
+        #         data = PinnedMessagesDict(json.load(f))
+        #         for i in range(len(data["pinned_messages"])):
+        #             channel_id = data["pinned_messages"][i]["channel_id"]
+        #             message_id = data["pinned_messages"][i]["message_id"]
+        #             if interaction.channel_id == channel_id:
+        #                 if message_id is not None:
+        #                     del_message = await interaction.channel.fetch_message(  # type: ignore
+        #                         message_id
+        #                     )
+        #                     await del_message.delete()
+        #                 message = await interaction.channel.send(  # type: ignore
+        #                     pinned_cmd_links[PlayingType.fest]
+        #                 )
+        #                 data["pinned_messages"][i]["message_id"] = message.id
+        #     with open(pinned_message_path, "w") as f:
+        #         json.dump(data, f, indent=2)
 
     @staticmethod
     async def create_embed(data: LFGDict) -> discord.Embed:
