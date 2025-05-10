@@ -23,20 +23,16 @@ from envv import (
     cat_ids_types,
     exists_pinned_message_path,
     pinned_ch_ids,
-    fest_ch_ids,
-    arbeit_ch_ids,
     fuka_vc_ids,
     guild_ids,
-    lobby_ch_ids,
     lobby_vc_ids,
     manta_vc_ids,
-    pinned_message_path,
     midnight_role_ids,
     pinned_cmd_links,
     utuho_vc_ids,
 )
 import utils.dpy_utils
-from utils.values import params
+from utils.values import file_path, params
 from utils.dpy_utils import (
     create_error_embed,
     create_log_embed,
@@ -59,7 +55,7 @@ class LFGCog(commands.Cog):
     async def on_ready(self) -> None:
         data = PinnedMessagesDict(pinned_messages=[])
         if exists := exists_pinned_message_path():
-            with open(pinned_message_path, "r") as f:
+            with open(file_path.pinned_message_json, "r") as f:
                 data = PinnedMessagesDict(json.load(f))
 
         guild = await self.bot.fetch_guild(guild_ids["release"])
@@ -74,7 +70,7 @@ class LFGCog(commands.Cog):
                     data["pinned_messages"].append(
                         PinnedMessageDict(channel_id=channel_id, message_id=message.id)
                     )
-        with open(pinned_message_path, "w" if exists else "x") as f:
+        with open(file_path.pinned_message_json, "w" if exists else "x") as f:
             json.dump(data, f, indent=2)
 
         print(__name__)
@@ -82,15 +78,6 @@ class LFGCog(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         await self.__update_pinned_message(message)
-
-    def __try_save_data(self, data: PinnedMessagesDict) -> bool:
-        try:
-            if exists_pinned_message_path():
-                with open(pinned_message_path, "w") as f:
-                    json.dump(data, f, indent=2)
-        except:
-            return False
-        return True
 
     async def __update_pinned_message(self, message: discord.Message) -> None:
         """
@@ -100,7 +87,7 @@ class LFGCog(commands.Cog):
         if message.flags.ephemeral or not exists_pinned_message_path():
             return
 
-        with open(pinned_message_path) as f:
+        with open(file_path.pinned_message_json) as f:
             data = PinnedMessagesDict(json.load(f))
 
         # 対象チャンネル内か確認
@@ -110,30 +97,32 @@ class LFGCog(commands.Cog):
 
         message_ids = [item["message_id"] for item in data["pinned_messages"]]
         # 自分自身が送信した固定メッセージではない(ファイルにチャンネルIDが存在しない)
-        if message.id not in message_ids:
-            for i in range(len(data["pinned_messages"])):
-                pinned_message = data["pinned_messages"][i]
-                category_id = int(message.channel.category_id)  # type: ignore
-                command_link = pinned_cmd_links[cat_ids_types[category_id]]
-                if pinned_message["message_id"] is not None:
-                    if message.channel.id == pinned_message["channel_id"]:
-                        old_message_id = pinned_message["message_id"]
-                        try:
-                            # 通知用に一度メッセージを削除しているので一回目は例外
-                            old_message = await message.channel.fetch_message(old_message_id)  # type: ignore
-                            await old_message.delete()
-                        except discord.NotFound:
-                            return
-                        new_message = await message.channel.send(command_link)
-                        data["pinned_messages"][i]["message_id"] = new_message.id
-                        break
-                else:
+        if message.id in message_ids:
+            return
+        for i in range(len(data["pinned_messages"])):
+            pinned_message = data["pinned_messages"][i]
+            category_id = int(message.channel.category_id)  # type: ignore
+            command_link = pinned_cmd_links[cat_ids_types[category_id]]
+            if pinned_message["message_id"] is not None:
+                if message.channel.id == pinned_message["channel_id"]:
+                    old_message_id = pinned_message["message_id"]
+                    try:
+                        # 通知用に一度メッセージを削除しているので一回目は例外
+                        old_message = await message.channel.fetch_message(old_message_id)  # type: ignore
+                        await old_message.delete()
+                    except discord.NotFound:
+                        return
                     new_message = await message.channel.send(command_link)
                     data["pinned_messages"][i]["message_id"] = new_message.id
-                    await asyncio.sleep(1)
                     break
-            with open(pinned_message_path, "w") as f:
-                json.dump(data, f, indent=2)
+            else:
+                new_message = await message.channel.send(command_link)
+                data["pinned_messages"][i]["message_id"] = new_message.id
+                await asyncio.sleep(1)
+                break
+        with open(file_path.pinned_message_json, "w") as f:
+            json.dump(data, f, indent=2)
+        print(self.__update_pinned_message.__name__)
 
     @property
     def __is_midnight(self) -> bool:

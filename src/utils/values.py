@@ -3,6 +3,7 @@
 
 class file_path:
     roles_yml: Final = "./data/roles.yml"
+    pinned_message_json: Final = "data/pinned_message.json"
 
 
 class api_url:
