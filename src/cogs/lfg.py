@@ -255,7 +255,7 @@ class LFGCog(commands.Cog):
             app_commands.Choice(name="プラベ", value="プラベ"),
             app_commands.Choice(name="なんでも", value="なんでも"),
         ],
-        players=get_players_choices(1, 10),
+        players=get_players_choices(0, 9),
     )
     @app_commands.autocomplete(vc_id=autocomplete_lobby)
     async def lfg_lobby(
@@ -355,7 +355,7 @@ class LFGCog(commands.Cog):
             app_commands.Choice(name="バイト(評価上げ)", value="バイト(評価上げ)"),
             app_commands.Choice(name="プラベバイト", value="プラベバイト"),
         ],
-        players=get_players_choices(1, 3),
+        players=get_players_choices(0, 3),
     )
     @app_commands.autocomplete(vc_id=autocomplete_arbeit)
     async def lfg_arbeit(
