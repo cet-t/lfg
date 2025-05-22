@@ -80,7 +80,7 @@ async def set_info(
         member = await guild.fetch_member(user.id)
         embed.set_author(
             name=member.display_name,
-            icon_url=user.avatar.url,  # type: ignore
+            icon_url=member.display_avatar,
         )
         embed.set_footer(
             text=f"{guild.name} - {datetime.now().__format__(datetime_format.yyyymmddhhmmss)}",
