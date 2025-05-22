@@ -16,6 +16,7 @@ class Playing(StrEnum):
     lobby_bankara = "バンカラ"
     lobby_event = "イベント"
     lobby_private = "プラベ"
+    lobby_nawabattler = "ナワバトラー"
     lobby_any = "なんでも"
 
     kuma_beit = "バイト"

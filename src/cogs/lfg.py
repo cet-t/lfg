@@ -253,6 +253,7 @@ class LFGCog(commands.Cog):
             app_commands.Choice(name="ナワバリ", value="ナワバリ"),
             app_commands.Choice(name="バンカラ", value="バンカラ"),
             app_commands.Choice(name="プラベ", value="プラベ"),
+            app_commands.Choice(name="ナワバトラー", value="ナワバトラー"),
             app_commands.Choice(name="なんでも", value="なんでも"),
         ],
         players=get_players_choices(0, 9),
